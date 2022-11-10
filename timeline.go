@@ -299,27 +299,27 @@ func (timeline *timeline) parseTweets() ([]*Tweet, string) {
 	return orderedTweets, cursor
 }
 
-func (timeline *timeline) parseUsers() ([]*Profile, string) {
-	users := make(map[string]Profile)
+// func (timeline *timeline) parseUsers() ([]*Profile, string) {
+// 	users := make(map[string]Profile)
 
-	for id, user := range timeline.GlobalObjects.Users {
-		users[id] = parseProfile(user)
-	}
+// 	for id, user := range timeline.GlobalObjects.Users {
+// 		users[id] = parseProfile(user)
+// 	}
 
-	var cursor string
-	var orderedProfiles []*Profile
-	for _, instruction := range timeline.Timeline.Instructions {
-		for _, entry := range instruction.AddEntries.Entries {
-			if profile, ok := users[entry.Content.Item.Content.User.ID]; ok {
-				orderedProfiles = append(orderedProfiles, &profile)
-			}
-			if entry.Content.Operation.Cursor.CursorType == "Bottom" {
-				cursor = entry.Content.Operation.Cursor.Value
-			}
-		}
-		if instruction.ReplaceEntry.Entry.Content.Operation.Cursor.CursorType == "Bottom" {
-			cursor = instruction.ReplaceEntry.Entry.Content.Operation.Cursor.Value
-		}
-	}
-	return orderedProfiles, cursor
-}
+// 	var cursor string
+// 	var orderedProfiles []*Profile
+// 	for _, instruction := range timeline.Timeline.Instructions {
+// 		for _, entry := range instruction.AddEntries.Entries {
+// 			if profile, ok := users[entry.Content.Item.Content.User.ID]; ok {
+// 				orderedProfiles = append(orderedProfiles, &profile)
+// 			}
+// 			if entry.Content.Operation.Cursor.CursorType == "Bottom" {
+// 				cursor = entry.Content.Operation.Cursor.Value
+// 			}
+// 		}
+// 		if instruction.ReplaceEntry.Entry.Content.Operation.Cursor.CursorType == "Bottom" {
+// 			cursor = instruction.ReplaceEntry.Entry.Content.Operation.Cursor.Value
+// 		}
+// 	}
+// 	return orderedProfiles, cursor
+// }

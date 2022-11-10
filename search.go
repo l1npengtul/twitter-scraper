@@ -15,15 +15,15 @@ func SearchTweets(ctx context.Context, query string, maxTweetsNbr int) <-chan *T
 	return defaultScraper.SearchTweets(ctx, query, maxTweetsNbr)
 }
 
-// SearchProfiles returns channel with profiles for a given search query
-func (s *Scraper) SearchProfiles(ctx context.Context, query string, maxProfilesNbr int) <-chan *ProfileResult {
-	return getUserTimeline(ctx, query, maxProfilesNbr, s.FetchSearchProfiles)
-}
+// // SearchProfiles returns channel with profiles for a given search query
+// func (s *Scraper) SearchProfiles(ctx context.Context, query string, maxProfilesNbr int) <-chan *ProfileResult {
+// 	return getUserTimeline(ctx, query, maxProfilesNbr, s.FetchSearchProfiles)
+// }
 
-// Deprecated: SearchProfiles wrapper for default Scraper
-func SearchProfiles(ctx context.Context, query string, maxProfilesNbr int) <-chan *ProfileResult {
-	return defaultScraper.SearchProfiles(ctx, query, maxProfilesNbr)
-}
+// // Deprecated: SearchProfiles wrapper for default Scraper
+// func SearchProfiles(ctx context.Context, query string, maxProfilesNbr int) <-chan *ProfileResult {
+// 	return defaultScraper.SearchProfiles(ctx, query, maxProfilesNbr)
+// }
 
 // getSearchTimeline gets results for a given search query, via the Twitter frontend API
 func (s *Scraper) getSearchTimeline(query string, maxNbr int, cursor string) (*timeline, error) {
@@ -76,12 +76,12 @@ func (s *Scraper) FetchSearchTweets(query string, maxTweetsNbr int, cursor strin
 	return tweets, nextCursor, nil
 }
 
-// FetchSearchProfiles gets users for a given search query, via the Twitter frontend API
-func (s *Scraper) FetchSearchProfiles(query string, maxProfilesNbr int, cursor string) ([]*Profile, string, error) {
-	timeline, err := s.getSearchTimeline(query, maxProfilesNbr, cursor)
-	if err != nil {
-		return nil, "", err
-	}
-	users, nextCursor := timeline.parseUsers()
-	return users, nextCursor, nil
-}
+// // FetchSearchProfiles gets users for a given search query, via the Twitter frontend API
+// func (s *Scraper) FetchSearchProfiles(query string, maxProfilesNbr int, cursor string) ([]*Profile, string, error) {
+// 	timeline, err := s.getSearchTimeline(query, maxProfilesNbr, cursor)
+// 	if err != nil {
+// 		return nil, "", err
+// 	}
+// 	users, nextCursor := timeline.parseUsers()
+// 	return users, nextCursor, nil
+// }

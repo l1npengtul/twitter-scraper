@@ -12,44 +12,61 @@ var cacheIDs sync.Map
 
 // Profile of twitter user.
 type Profile struct {
-	Avatar         string
-	Banner         string
-	Biography      string
-	Birthday       string
-	FollowersCount int
-	FollowingCount int
-	FriendsCount   int
-	IsPrivate      bool
-	IsVerified     bool
-	Joined         *time.Time
-	LikesCount     int
-	ListedCount    int
-	Location       string
-	Name           string
-	PinnedTweetIDs []string
-	TweetsCount    int
-	URL            string
-	UserID         string
-	Username       string
-	Website        string
+	Avatar           string
+	IsNFTAvatar      bool
+	Banner           string
+	Biography        string
+	FollowersCount   int
+	FollowingCount   int
+	IsPrivate        bool
+	IsVerified       bool
+	IsVerifiedBlue   bool
+	Joined           *time.Time
+	LikesCount       int
+	ListedCount      int
+	Location         string
+	Name             string
+	PinnedTweetIDs   []string
+	TweetsCount      int
+	URL              string
+	UserID           string
+	Username         string
+	Website          string
+	ProfessionalType string
+	ProfessionalDesc string
+	AffiliatesType   string
+	AffiliatesDesc   string
 }
 
 type user struct {
 	Data struct {
 		User struct {
-			RestID string     `json:"rest_id"`
-			Legacy legacyUser `json:"legacy"`
+			Result struct {
+				TypeName string `json:"__typename"`
+				RestId   string `json:"rest_id"`
+				// things we care about
+				HasNFTAvatar   bool         `json:"has_nft_avatar"`
+				IsBlueVerified bool         `json:"is_blue_verified"`
+				Legacy         legacyUser   `json:"legacy"`
+				Professional   professional `json:"professional"`
+				Reason         string       `json:"reason"`
+
+				Affiliates Affiliates `json:"affiliates_highlighted_label"`
+
+				// Unavailible
+				UnavailableMessage struct {
+					Rtl  bool   `json:"rtl"`
+					Text string `json:"text"`
+				} `json:"unavailable_message"`
+			} `json:"result"`
 		} `json:"user"`
 	} `json:"data"`
-	Errors []struct {
-		Message string `json:"message"`
-	} `json:"errors"`
 }
 
 // GetProfile return parsed user profile.
 func (s *Scraper) GetProfile(username string) (Profile, error) {
 	var jsn user
-	req, err := http.NewRequest("GET", "https://api.twitter.com/graphql/4S2ihIKfF3xhp-ENxvUAfQ/UserByScreenName?variables=%7B%22screen_name%22%3A%22"+username+"%22%2C%22withHighlightedLabel%22%3Atrue%7D", nil)
+	req, err := http.NewRequest("GET", "https://twitter.com/i/api/graphql/ptQPCD7NrFS_TW71Lq07nw/UserByScreenName?variables%3D%7B%22screen_name%22%3A%22"+username+"%22%2C%22withSafetyModeUserFields%22%3Atrue%2C%22withSuperFollowsUserFields%22%3Atrue%7D%26features%3D%7B%22responsive_web_twitter_blue_verified_badge_is_enabled%22%3Atrue%2C%22verified_phone_label_enabled%22%3Afalse%2C%22responsive_web_graphql_timeline_navigation_enabled%22%3Atrue%7D", nil)
 	if err != nil {
 		return Profile{}, err
 	}
@@ -59,20 +76,21 @@ func (s *Scraper) GetProfile(username string) (Profile, error) {
 		return Profile{}, err
 	}
 
-	if len(jsn.Errors) > 0 {
-		return Profile{}, fmt.Errorf("%s", jsn.Errors[0].Message)
+	if jsn.Data.User.Result.Reason != "" {
+		return Profile{}, fmt.Errorf("%s", jsn.Data.User.Result.Reason)
 	}
 
-	if jsn.Data.User.RestID == "" {
+	if jsn.Data.User.Result.RestId == "" {
 		return Profile{}, fmt.Errorf("rest_id not found")
 	}
-	jsn.Data.User.Legacy.IDStr = jsn.Data.User.RestID
 
-	if jsn.Data.User.Legacy.ScreenName == "" {
+	jsn.Data.User.Result.Legacy.IDStr = jsn.Data.User.Result.RestId
+
+	if jsn.Data.User.Result.Legacy.ScreenName == "" {
 		return Profile{}, fmt.Errorf("either @%s does not exist or is private", username)
 	}
 
-	return parseProfile(jsn.Data.User.Legacy), nil
+	return parseProfile(jsn), nil
 }
 
 // Deprecated: GetProfile wrapper for default scraper

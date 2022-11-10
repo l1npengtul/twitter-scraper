@@ -25,32 +25,32 @@ func TestFetchSearchCursor(t *testing.T) {
 	}
 }
 
-func TestGetSearchProfiles(t *testing.T) {
-	count := 0
-	maxProfilesNbr := 150
-	dupcheck := make(map[string]bool)
-	scraper := twitterscraper.New().SetSearchMode(twitterscraper.SearchUsers)
-	for profile := range scraper.SearchProfiles(context.Background(), "Twitter", maxProfilesNbr) {
-		if profile.Error != nil {
-			t.Error(profile.Error)
-		} else {
-			count++
-			if profile.UserID == "" {
-				t.Error("Expected UserID is empty")
-			} else {
-				if dupcheck[profile.UserID] {
-					t.Errorf("Detect duplicated UserID: %s", profile.UserID)
-				} else {
-					dupcheck[profile.UserID] = true
-				}
-			}
-		}
-	}
+// func TestGetSearchProfiles(t *testing.T) {
+// 	count := 0
+// 	maxProfilesNbr := 150
+// 	dupcheck := make(map[string]bool)
+// 	scraper := twitterscraper.New().SetSearchMode(twitterscraper.SearchUsers)
+// 	for profile := range scraper.SearchProfiles(context.Background(), "Twitter", maxProfilesNbr) {
+// 		if profile.Error != nil {
+// 			t.Error(profile.Error)
+// 		} else {
+// 			count++
+// 			if profile.UserID == "" {
+// 				t.Error("Expected UserID is empty")
+// 			} else {
+// 				if dupcheck[profile.UserID] {
+// 					t.Errorf("Detect duplicated UserID: %s", profile.UserID)
+// 				} else {
+// 					dupcheck[profile.UserID] = true
+// 				}
+// 			}
+// 		}
+// 	}
 
-	if count != maxProfilesNbr {
-		t.Errorf("Expected profiles count=%v, got: %v", maxProfilesNbr, count)
-	}
-}
+//		if count != maxProfilesNbr {
+//			t.Errorf("Expected profiles count=%v, got: %v", maxProfilesNbr, count)
+//		}
+//	}
 func TestGetSearchTweets(t *testing.T) {
 	count := 0
 	maxTweetsNbr := 150

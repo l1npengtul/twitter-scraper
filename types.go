@@ -76,6 +76,31 @@ type (
 		Verified             bool     `json:"verified"`
 	}
 
+	professional struct {
+		ProfessionalType string     `json:"professional_type"`
+		RestId           string     `json:"rest_id"`
+		Category         []category `json:"category"`
+	}
+
+	category struct {
+		Id       int    `json:"id"`
+		Name     string `json:"name"`
+		IconName string `json:"icon_name"`
+	}
+
+	Affiliates struct {
+		Label struct {
+			Url struct {
+				Url     string `json:"url"`
+				UrlType string `json:"urlType"`
+			} `json:"url"`
+			Badge struct {
+				Url string `json:"url"`
+			} `json:"badge"`
+			Description string `json:"description"`
+		} `json:"label"`
+	}
+
 	Place struct {
 		ID          string `json:"id"`
 		PlaceType   string `json:"place_type"`

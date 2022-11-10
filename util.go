@@ -144,35 +144,43 @@ func getTweetTimeline(ctx context.Context, query string, maxTweetsNbr int, fetch
 	return channel
 }
 
-func parseProfile(user legacyUser) Profile {
+func parseProfile(user user) Profile {
 	profile := Profile{
-		Avatar:         user.ProfileImageURLHTTPS,
-		Banner:         user.ProfileBannerURL,
-		Biography:      user.Description,
-		FollowersCount: user.FollowersCount,
-		FollowingCount: user.FavouritesCount,
-		FriendsCount:   user.FriendsCount,
-		IsPrivate:      user.Protected,
-		IsVerified:     user.Verified,
-		LikesCount:     user.FavouritesCount,
-		ListedCount:    user.ListedCount,
-		Location:       user.Location,
-		Name:           user.Name,
-		PinnedTweetIDs: user.PinnedTweetIdsStr,
-		TweetsCount:    user.StatusesCount,
-		URL:            "https://twitter.com/" + user.ScreenName,
-		UserID:         user.IDStr,
-		Username:       user.ScreenName,
+		Avatar:           user.Data.User.Result.Legacy.ProfileImageURLHTTPS,
+		IsNFTAvatar:      user.Data.User.Result.HasNFTAvatar,
+		Banner:           user.Data.User.Result.Legacy.ProfileBannerURL,
+		Biography:        user.Data.User.Result.Legacy.Description,
+		FollowersCount:   user.Data.User.Result.Legacy.FollowersCount,
+		FollowingCount:   user.Data.User.Result.Legacy.FriendsCount,
+		IsPrivate:        user.Data.User.Result.Legacy.Protected,
+		IsVerified:       user.Data.User.Result.Legacy.Verified,
+		IsVerifiedBlue:   user.Data.User.Result.IsBlueVerified,
+		LikesCount:       user.Data.User.Result.Legacy.FavouritesCount,
+		ListedCount:      user.Data.User.Result.Legacy.ListedCount,
+		Location:         user.Data.User.Result.Legacy.Location,
+		Name:             user.Data.User.Result.Legacy.Name,
+		PinnedTweetIDs:   user.Data.User.Result.Legacy.PinnedTweetIdsStr,
+		TweetsCount:      user.Data.User.Result.Legacy.StatusesCount,
+		URL:              "https://twitter.com/" + user.Data.User.Result.Legacy.ScreenName,
+		UserID:           user.Data.User.Result.Legacy.IDStr,
+		Username:         user.Data.User.Result.Legacy.ScreenName,
+		ProfessionalType: user.Data.User.Result.Professional.ProfessionalType,
+		AffiliatesType:   user.Data.User.Result.Affiliates.Label.Url.Url,
+		AffiliatesDesc:   user.Data.User.Result.Affiliates.Label.Description,
 	}
 
-	tm, err := time.Parse(time.RubyDate, user.CreatedAt)
+	tm, err := time.Parse(time.RubyDate, user.Data.User.Result.Legacy.CreatedAt)
 	if err == nil {
 		tm = tm.UTC()
 		profile.Joined = &tm
 	}
 
-	if len(user.Entities.URL.Urls) > 0 {
-		profile.Website = user.Entities.URL.Urls[0].ExpandedURL
+	if len(user.Data.User.Result.Legacy.Entities.URL.Urls) > 0 {
+		profile.Website = user.Data.User.Result.Legacy.Entities.URL.Urls[0].ExpandedURL
+	}
+
+	if len(user.Data.User.Result.Professional.Category) > 0 {
+		profile.ProfessionalDesc = user.Data.User.Result.Professional.Category[0].Name
 	}
 
 	return profile
