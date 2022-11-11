@@ -3,6 +3,7 @@ package twitterscraper
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strconv"
 	"time"
 )
@@ -79,38 +80,37 @@ func GetTweet(id string) (*Tweet, error) {
 }
 
 type timelinerecursive struct {
-	ThreadedConvo struct {
-		Instructions struct {
-			Entries struct {
-				Type string
-			}
-			Terminate struct {
-				Type      string
-				Direction string
-			}
-		}
-	}
+	Errors []Err `json:"error"`
+	Data   struct {
+		ThreadedConvo struct {
+			Instructions []instrutions `json:"instructions"`
+		} `json:"threaded_conversation_with_injections_v2"`
+	} `json:"data"`
+}
+
+type Err struct {
+	Message string `json:"message"`
+}
+
+type instrutions struct {
+	Type      string                   `json:"type"`
+	Direction string                   `json:"direction"`
+	Entires   []recursivetimelineentry `json:"entries"`
 }
 
 type recursivetimelineentry struct {
-	EntryId   string
-	SortIndex string
+	EntryId   string `json:"entryId"`
+	SortIndex string `json:"sortIndex"`
 	content   struct {
-		EntryType string
-		TypeName  string
-	}
-}
-
-type items struct {
-	EntryId string
-	item    struct {
+		EntryType   string `json:"entryType"`
+		TypeName    string `json:"__typename"`
 		itemcontent struct {
-			ItemType      string
-			TypeName      string
+			ItemType      string `json:"itemType"`
+			TypeName      string `json:"__typename"`
 			tweet_results struct {
 				result struct {
-					TypeName string
-					RestId   string
+					TypeName string `json:"__typename"`
+					RestId   string `json:"rest_id"`
 					core     struct {
 						user_results struct {
 							Result struct {
@@ -131,10 +131,10 @@ type items struct {
 									Text string `json:"text"`
 								} `json:"unavailable_message"`
 							} `json:"result"`
-						}
-					}
-				}
-			}
+						} `json:"user_results"`
+					} `json:"core"`
+				} `json:"result"`
+			} `json:"tweet_results"`
 
 			Legacy struct {
 				ConversationIDStr string `json:"conversation_id_str"`
@@ -183,11 +183,95 @@ type items struct {
 				Time                 time.Time `json:"time"`
 				UserIDStr            string    `json:"user_id_str"`
 			} `json:"legacy"`
-		}
-	}
+
+			HasModeratedReplies bool `json:"hasModeratedReplies"`
+
+			// cursor
+			Value  string `json:"value"`
+			Cursor string `json:"cursorType"`
+		} `json:"itemContent"`
+	} `json:"content"`
 }
 
-func GetTweetAndRepliesRecursive(id string) ([]Tweet, error) {
+type TweetThreadTree struct {
+	Store map[string]Tweet
+	Root  RootTweet
+}
+
+type RootTweet struct {
+	Content string
+	Replies []*NodeTweet
+}
+
+type NodeTweet struct {
+	Id      string
+	Replies []*NodeTweet
+}
+
+func (s *Scraper) GetTweetAndRepliesRecursive(id string) ([]Tweet, error) {
 	tweets := []Tweet{}
+
+	req, err := s.newRequest("GET", "https://twitter.com/i/api/graphql/BoHLKeBvibdYDiJON1oqTg/TweetDetail?variables=%7B%22focalTweetId%22%3A%22"+id+"%22%2C%22with_rux_injections%22%3Afalse%2C%22includePromotedContent%22%3Afalse%2C%22withCommunity%22%3Afalse%2C%22withQuickPromoteEligibilityTweetFields%22%3Afalse%2C%22withBirdwatchNotes%22%3Afalse%2C%22withSuperFollowsUserFields%22%3Afalse%2C%22withDownvotePerspective%22%3Afalse%2C%22withReactionsMetadata%22%3Afalse%2C%22withReactionsPerspective%22%3Afalse%2C%22withSuperFollowsTweetFields%22%3Afalse%2C%22withVoice%22%3Afalse%2C%22withV2Timeline%22%3Atrue%7D%26features%3D%7B%22responsive_web_twitter_blue_verified_badge_is_enabled%22%3Atrue%2C%22verified_phone_label_enabled%22%3Afalse%2C%22responsive_web_graphql_timeline_navigation_enabled%22%3Atrue%2C%22unified_cards_ad_metadata_container_dynamic_card_content_query_enabled%22%3Atrue%2C%22tweetypie_unmention_optimization_enabled%22%3Atrue%2C%22responsive_web_uc_gql_enabled%22%3Atrue%2C%22vibe_api_enabled%22%3Atrue%2C%22responsive_web_edit_tweet_api_enabled%22%3Atrue%2C%22graphql_is_translatable_rweb_tweet_is_translatable_enabled%22%3Atrue%2C%22standardized_nudges_misinfo%22%3Atrue%2C%22tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled%22%3Afalse%2C%22interactive_text_enabled%22%3Atrue%2C%22responsive_web_text_conversations_enabled%22%3Afalse%2C%22responsive_web_enhance_cards_enabled%22%3Atrue%7D")
+	if err != nil {
+		return tweets, err
+	}
+
+	timelines := []timelinerecursive{}
+
+	var firstjsn timelinerecursive
+	err = s.RequestAPI(req, &firstjsn)
+	if err != nil {
+		return tweets, err
+	}
+
+	if len(firstjsn.Errors) > 0 {
+		return tweets, fmt.Errorf("%s", firstjsn.Errors[0].Message)
+	}
+
+	timelines = append(timelines, firstjsn)
+
+	// find cursor recursively
+	for {
+		last_timeline := timelines[len(timelines)-1]
+
+		if len(last_timeline.Data.ThreadedConvo.Instructions) <= 0 {
+			break
+		}
+
+		if len(last_timeline.Data.ThreadedConvo.Instructions[0].Entires) <= 0 {
+			break
+		}
+
+		if last_timeline.Data.ThreadedConvo.Instructions[0].Entires[len(last_timeline.Data.ThreadedConvo.Instructions[0].Entires)-1].content.itemcontent.Cursor != "" {
+			// requsts with cursor
+			cursor := url.QueryEscape(last_timeline.Data.ThreadedConvo.Instructions[0].Entires[len(last_timeline.Data.ThreadedConvo.Instructions[0].Entires)-1].content.itemcontent.Cursor)
+			req, err = s.newRequest("GET", "https://twitter.com/i/api/graphql/BoHLKeBvibdYDiJON1oqTg/TweetDetail?variables%3D%7B%22focalTweetId%22%3A%22"+id+"%22%2C%22cursor%22%3A%22"+cursor+"%22%2C%22referrer%22%3A%22messages%22%2C%22with_rux_injections%22%3Afalse%2C%22includePromotedContent%22%3Afa%3Bse%2C%22withCommunity%22%3Afalse%2C%22withQuickPromoteEligibilityTweetFields%22%3Afalse%2C%22withBirdwatchNotes%22%3Afalse%2C%22withSuperFollowsUserFields%22%3Afalse%2C%22withDownvotePerspective%22%3Afalse%2C%22withReactionsMetadata%22%3Afalse%2C%22withReactionsPerspective%22%3Afalse%2C%22withSuperFollowsTweetFields%22%3Afalse%2C%22withVoice%22%3Atrue%2C%22withV2Timeline%22%3Atrue%7D%26features%3D%7B%22responsive_web_twitter_blue_verified_badge_is_enabled%22%3Atrue%2C%22verified_phone_label_enabled%22%3Afalse%2C%22responsive_web_graphql_timeline_navigation_enabled%22%3Atrue%2C%22unified_cards_ad_metadata_container_dynamic_card_content_query_enabled%22%3Atrue%2C%22tweetypie_unmention_optimization_enabled%22%3Atrue%2C%22responsive_web_uc_gql_enabled%22%3Atrue%2C%22vibe_api_enabled%22%3Atrue%2C%22responsive_web_edit_tweet_api_enabled%22%3Atrue%2C%22graphql_is_translatable_rweb_tweet_is_translatable_enabled%22%3Atrue%2C%22standardized_nudges_misinfo%22%3Atrue%2C%22tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled%22%3Afalse%2C%22interactive_text_enabled%22%3Atrue%2C%22responsive_web_text_conversations_enabled%22%3Afalse%2C%22responsive_web_enhance_cards_enabled%22%3Atrue%7D")
+			if err != nil {
+				return tweets, err
+			}
+
+			var jsn timelinerecursive
+			err = s.RequestAPI(req, &jsn)
+			if err != nil {
+				return tweets, err
+			}
+
+			if len(jsn.Errors) > 0 {
+				return tweets, fmt.Errorf("%s", jsn.Errors[0].Message)
+			}
+
+			timelines = append(timelines, jsn)
+
+		} else {
+			break
+		}
+	}
+
+	for timeline := timelines {
+		// get tweets
+
+		// parse entries
+		
+	}
 
 }
