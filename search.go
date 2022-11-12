@@ -1,19 +1,18 @@
 package twitterscraper
 
 import (
-	"context"
 	"strconv"
 )
 
-// SearchTweets returns channel with tweets for a given search query
-func (s *Scraper) SearchTweets(ctx context.Context, query string, maxTweetsNbr int) <-chan *TweetResult {
-	return getTweetTimeline(ctx, query, maxTweetsNbr, s.FetchSearchTweets)
-}
+//// SearchTweets returns channel with tweets for a given search query
+//func (s *Scraper) SearchTweets(ctx context.Context, query string, maxTweetsNbr int) <-chan *TweetResult {
+//	return getTweetTimeline(ctx, query, maxTweetsNbr, s.FetchSearchTweets)
+//}
 
-// Deprecated: SearchTweets wrapper for default Scraper
-func SearchTweets(ctx context.Context, query string, maxTweetsNbr int) <-chan *TweetResult {
-	return defaultScraper.SearchTweets(ctx, query, maxTweetsNbr)
-}
+//// Deprecated: SearchTweets wrapper for default Scraper
+//func SearchTweets(ctx context.Context, query string, maxTweetsNbr int) <-chan *TweetResult {
+//	return defaultScraper.SearchTweets(ctx, query, maxTweetsNbr)
+//}
 
 // // SearchProfiles returns channel with profiles for a given search query
 // func (s *Scraper) SearchProfiles(ctx context.Context, query string, maxProfilesNbr int) <-chan *ProfileResult {
@@ -66,15 +65,16 @@ func (s *Scraper) getSearchTimeline(query string, maxNbr int, cursor string) (*t
 	return &timeline, nil
 }
 
-// FetchSearchTweets gets tweets for a given search query, via the Twitter frontend API
-func (s *Scraper) FetchSearchTweets(query string, maxTweetsNbr int, cursor string) ([]*Tweet, string, error) {
-	timeline, err := s.getSearchTimeline(query, maxTweetsNbr, cursor)
-	if err != nil {
-		return nil, "", err
-	}
-	tweets, nextCursor := timeline.parseTweets()
-	return tweets, nextCursor, nil
-}
+//
+//// FetchSearchTweets gets tweets for a given search query, via the Twitter frontend API
+//func (s *Scraper) FetchSearchTweets(query string, maxTweetsNbr int, cursor string) ([]*Tweet, string, error) {
+//	timeline, err := s.getSearchTimeline(query, maxTweetsNbr, cursor)
+//	if err != nil {
+//		return nil, "", err
+//	}
+//	tweets, nextCursor := timeline.parseTweets()
+//	return tweets, nextCursor, nil
+//}
 
 // // FetchSearchProfiles gets users for a given search query, via the Twitter frontend API
 // func (s *Scraper) FetchSearchProfiles(query string, maxProfilesNbr int, cursor string) ([]*Profile, string, error) {

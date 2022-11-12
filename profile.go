@@ -26,7 +26,7 @@ type Profile struct {
 	ListedCount      int
 	Location         string
 	Name             string
-	PinnedTweetIDs   []string
+	PinnedTweetID    string
 	TweetsCount      int
 	URL              string
 	UserID           string
@@ -41,26 +41,28 @@ type Profile struct {
 type user struct {
 	Data struct {
 		User struct {
-			Result struct {
-				TypeName string `json:"__typename"`
-				RestId   string `json:"rest_id"`
-				// things we care about
-				HasNFTAvatar   bool         `json:"has_nft_avatar"`
-				IsBlueVerified bool         `json:"is_blue_verified"`
-				Legacy         legacyUser   `json:"legacy"`
-				Professional   professional `json:"professional"`
-				Reason         string       `json:"reason"`
-
-				Affiliates Affiliates `json:"affiliates_highlighted_label"`
-
-				// Unavailible
-				UnavailableMessage struct {
-					Rtl  bool   `json:"rtl"`
-					Text string `json:"text"`
-				} `json:"unavailable_message"`
-			} `json:"result"`
+			Result UserResult `json:"result"`
 		} `json:"user"`
 	} `json:"data"`
+}
+
+type UserResult struct {
+	TypeName string `json:"__typename"`
+	RestId   string `json:"rest_id"`
+	// things we care about
+	HasNFTAvatar   bool         `json:"has_nft_avatar"`
+	IsBlueVerified bool         `json:"is_blue_verified"`
+	Legacy         legacyUser   `json:"legacy"`
+	Professional   professional `json:"professional"`
+	Reason         string       `json:"reason"`
+
+	Affiliates Affiliates `json:"affiliates_highlighted_label"`
+
+	// Unavailible
+	UnavailableMessage struct {
+		Rtl  bool   `json:"rtl"`
+		Text string `json:"text"`
+	} `json:"unavailable_message"`
 }
 
 // GetProfile return parsed user profile.

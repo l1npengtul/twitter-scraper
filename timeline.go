@@ -1,8 +1,6 @@
 package twitterscraper
 
 import (
-	"fmt"
-	"strings"
 	"time"
 )
 
@@ -152,152 +150,146 @@ type timeline struct {
 	} `json:"timeline"`
 }
 
-func (timeline *timeline) parseTweet(id string) *Tweet {
-	if tweet, ok := timeline.GlobalObjects.Tweets[id]; ok {
-		username := timeline.GlobalObjects.Users[tweet.UserIDStr].ScreenName
-		tw := &Tweet{
-			ID:           id,
-			Likes:        tweet.FavoriteCount,
-			PermanentURL: fmt.Sprintf("https://twitter.com/%s/status/%s", username, id),
-			Replies:      tweet.ReplyCount,
-			Retweets:     tweet.RetweetCount,
-			Text:         tweet.FullText,
-			UserID:       tweet.UserIDStr,
-			Username:     username,
-		}
-
-		tm, err := time.Parse(time.RubyDate, tweet.CreatedAt)
-		if err == nil {
-			tw.TimeParsed = tm
-			tw.Timestamp = tm.Unix()
-		}
-
-		if tweet.Place.ID != "" {
-			tw.Place = &tweet.Place
-		}
-
-		if tweet.QuotedStatusIDStr != "" {
-			tw.IsQuoted = true
-			tw.QuotedStatus = timeline.parseTweet(tweet.QuotedStatusIDStr)
-		}
-		if tweet.InReplyToStatusIDStr != "" {
-			tw.IsReply = true
-			tw.InReplyToStatus = timeline.parseTweet(tweet.InReplyToStatusIDStr)
-		}
-		if tweet.RetweetedStatusIDStr != "" {
-			tw.IsRetweet = true
-			tw.RetweetedStatus = timeline.parseTweet(tweet.RetweetedStatusIDStr)
-		}
-
-		for _, pinned := range timeline.GlobalObjects.Users[tweet.UserIDStr].PinnedTweetIdsStr {
-			if tweet.ConversationIDStr == pinned {
-				tw.IsPin = true
-				break
-			}
-		}
-
-		for _, hash := range tweet.Entities.Hashtags {
-			tw.Hashtags = append(tw.Hashtags, hash.Text)
-		}
-
-		for _, media := range tweet.ExtendedEntities.Media {
-			if media.Type == "photo" {
-				tw.Photos = append(tw.Photos, media.MediaURLHttps)
-			} else if media.Type == "video" {
-				video := Video{
-					ID:      media.IDStr,
-					Preview: media.MediaURLHttps,
-				}
-
-				maxBitrate := 0
-				for _, variant := range media.VideoInfo.Variants {
-					if variant.Bitrate > maxBitrate {
-						video.URL = strings.TrimSuffix(variant.URL, "?tag=10")
-						maxBitrate = variant.Bitrate
-					}
-				}
-
-				tw.Photos = append(tw.Photos, video.Preview)
-				tw.Videos = append(tw.Videos, video)
-			}
-
-			if !tw.SensitiveContent {
-				sensitive := media.ExtSensitiveMediaWarning
-				tw.SensitiveContent = sensitive.AdultContent || sensitive.GraphicViolence || sensitive.Other
-			}
-		}
-
-		for _, url := range tweet.Entities.URLs {
-			tw.URLs = append(tw.URLs, url.ExpandedURL)
-		}
-
-		tw.HTML = tweet.FullText
-		tw.HTML = reHashtag.ReplaceAllStringFunc(tw.HTML, func(hashtag string) string {
-			return fmt.Sprintf(`<a href="https://twitter.com/hashtag/%s">%s</a>`,
-				strings.TrimPrefix(hashtag, "#"),
-				hashtag,
-			)
-		})
-		tw.HTML = reUsername.ReplaceAllStringFunc(tw.HTML, func(username string) string {
-			return fmt.Sprintf(`<a href="https://twitter.com/%s">%s</a>`,
-				strings.TrimPrefix(username, "@"),
-				username,
-			)
-		})
-		var foundedMedia []string
-		tw.HTML = reTwitterURL.ReplaceAllStringFunc(tw.HTML, func(tco string) string {
-			for _, entity := range tweet.Entities.URLs {
-				if tco == entity.URL {
-					return fmt.Sprintf(`<a href="%s">%s</a>`, entity.ExpandedURL, tco)
-				}
-			}
-			for _, entity := range tweet.ExtendedEntities.Media {
-				if tco == entity.URL {
-					foundedMedia = append(foundedMedia, entity.MediaURLHttps)
-					return fmt.Sprintf(`<br><a href="%s"><img src="%s"/></a>`, tco, entity.MediaURLHttps)
-				}
-			}
-			return tco
-		})
-		for _, url := range tw.Photos {
-			if stringInSlice(url, foundedMedia) {
-				continue
-			}
-			tw.HTML += fmt.Sprintf(`<br><img src="%s"/>`, url)
-		}
-		tw.HTML = strings.Replace(tw.HTML, "\n", "<br>", -1)
-		return tw
-	}
-	return nil
-}
-
-func (timeline *timeline) parseTweets() ([]*Tweet, string) {
-	var cursor string
-	var pinnedTweet *Tweet
-	var orderedTweets []*Tweet
-	for _, instruction := range timeline.Timeline.Instructions {
-		if instruction.PinEntry.Entry.Content.Item.Content.Tweet.ID != "" {
-			if tweet := timeline.parseTweet(instruction.PinEntry.Entry.Content.Item.Content.Tweet.ID); tweet != nil {
-				pinnedTweet = tweet
-			}
-		}
-		for _, entry := range instruction.AddEntries.Entries {
-			if tweet := timeline.parseTweet(entry.Content.Item.Content.Tweet.ID); tweet != nil {
-				orderedTweets = append(orderedTweets, tweet)
-			}
-			if entry.Content.Operation.Cursor.CursorType == "Bottom" {
-				cursor = entry.Content.Operation.Cursor.Value
-			}
-		}
-		if instruction.ReplaceEntry.Entry.Content.Operation.Cursor.CursorType == "Bottom" {
-			cursor = instruction.ReplaceEntry.Entry.Content.Operation.Cursor.Value
-		}
-	}
-	if pinnedTweet != nil && len(orderedTweets) > 0 {
-		orderedTweets = append([]*Tweet{pinnedTweet}, orderedTweets...)
-	}
-	return orderedTweets, cursor
-}
+//func (timeline *timeline) parseTweet(id string) *Tweet {
+//	if tweet, ok := timeline.GlobalObjects.Tweets[id]; ok {
+//		username := timeline.GlobalObjects.Users[tweet.UserIDStr].ScreenName
+//		tw := &Tweet{
+//			ID:           id,
+//			Likes:        tweet.FavoriteCount,
+//			PermanentURL: fmt.Sprintf("https://twitter.com/%s/status/%s", username, id),
+//			Replies:      tweet.ReplyCount,
+//			Retweets:     tweet.RetweetCount,
+//			Text:         tweet.FullText,
+//			UserID:       tweet.UserIDStr,
+//			Username:     username,
+//		}
+//
+//		tm, err := time.Parse(time.RubyDate, tweet.CreatedAt)
+//		if err == nil {
+//			tw.TimeParsed = tm
+//			tw.Timestamp = tm.Unix()
+//		}
+//
+//		if tweet.QuotedStatusIDStr != "" {
+//			tw.QuoteRetweetId = timeline.parseTweet(tweet.QuotedStatusIDStr).ID
+//		}
+//		if tweet.InReplyToStatusIDStr != "" {
+//			tw.IsReply = true
+//			tw.ReplyingTo = timeline.parseTweet(tweet.InReplyToStatusIDStr).ID
+//		}
+//		if tweet.RetweetedStatusIDStr != "" {
+//			tw.IsRetweet = true
+//		}
+//
+//		for _, pinned := range timeline.GlobalObjects.Users[tweet.UserIDStr].PinnedTweetIdsStr {
+//			if tweet.ConversationIDStr == pinned {
+//				tw.IsPin = true
+//				break
+//			}
+//		}
+//
+//		for _, hash := range tweet.Entities.Hashtags {
+//			tw.Hashtags = append(tw.Hashtags, hash.Text)
+//		}
+//
+//		for _, media := range tweet.ExtendedEntities.Media {
+//			if media.Type == "photo" {
+//				tw.Photos = append(tw.Photos, media.MediaURLHttps)
+//			} else if media.Type == "video" {
+//				video := Video{
+//					ID:      media.IDStr,
+//					Preview: media.MediaURLHttps,
+//				}
+//
+//				maxBitrate := 0
+//				for _, variant := range media.VideoInfo.Variants {
+//					if variant.Bitrate > maxBitrate {
+//						video.URL = strings.TrimSuffix(variant.URL, "?tag=10")
+//						maxBitrate = variant.Bitrate
+//					}
+//				}
+//
+//				tw.Photos = append(tw.Photos, video.Preview)
+//				tw.Videos = append(tw.Videos, video)
+//			}
+//
+//			if !tw.SensitiveContent {
+//				sensitive := media.ExtSensitiveMediaWarning
+//				tw.SensitiveContent = sensitive.AdultContent || sensitive.GraphicViolence || sensitive.Other
+//			}
+//		}
+//
+//		for _, url := range tweet.Entities.URLs {
+//			tw.URLs = append(tw.URLs, url.ExpandedURL)
+//		}
+//
+//		tw.HTML = tweet.FullText
+//		tw.HTML = reHashtag.ReplaceAllStringFunc(tw.HTML, func(hashtag string) string {
+//			return fmt.Sprintf(`<a href="https://twitter.com/hashtag/%s">%s</a>`,
+//				strings.TrimPrefix(hashtag, "#"),
+//				hashtag,
+//			)
+//		})
+//		tw.HTML = reUsername.ReplaceAllStringFunc(tw.HTML, func(username string) string {
+//			return fmt.Sprintf(`<a href="https://twitter.com/%s">%s</a>`,
+//				strings.TrimPrefix(username, "@"),
+//				username,
+//			)
+//		})
+//		var foundedMedia []string
+//		tw.HTML = reTwitterURL.ReplaceAllStringFunc(tw.HTML, func(tco string) string {
+//			for _, entity := range tweet.Entities.URLs {
+//				if tco == entity.URL {
+//					return fmt.Sprintf(`<a href="%s">%s</a>`, entity.ExpandedURL, tco)
+//				}
+//			}
+//			for _, entity := range tweet.ExtendedEntities.Media {
+//				if tco == entity.URL {
+//					foundedMedia = append(foundedMedia, entity.MediaURLHttps)
+//					return fmt.Sprintf(`<br><a href="%s"><img src="%s"/></a>`, tco, entity.MediaURLHttps)
+//				}
+//			}
+//			return tco
+//		})
+//		for _, url := range tw.Photos {
+//			if stringInSlice(url, foundedMedia) {
+//				continue
+//			}
+//			tw.HTML += fmt.Sprintf(`<br><img src="%s"/>`, url)
+//		}
+//		tw.HTML = strings.Replace(tw.HTML, "\n", "<br>", -1)
+//		return tw
+//	}
+//	return nil
+//}
+//
+//func (timeline *timeline) parseTweets() ([]*Tweet, string) {
+//	var cursor string
+//	var pinnedTweet *Tweet
+//	var orderedTweets []*Tweet
+//	for _, instruction := range timeline.Timeline.Instructions {
+//		if instruction.PinEntry.Entry.Content.Item.Content.Tweet.ID != "" {
+//			if tweet := timeline.parseTweet(instruction.PinEntry.Entry.Content.Item.Content.Tweet.ID); tweet != nil {
+//				pinnedTweet = tweet
+//			}
+//		}
+//		for _, entry := range instruction.AddEntries.Entries {
+//			if tweet := timeline.parseTweet(entry.Content.Item.Content.Tweet.ID); tweet != nil {
+//				orderedTweets = append(orderedTweets, tweet)
+//			}
+//			if entry.Content.Operation.Cursor.CursorType == "Bottom" {
+//				cursor = entry.Content.Operation.Cursor.Value
+//			}
+//		}
+//		if instruction.ReplaceEntry.Entry.Content.Operation.Cursor.CursorType == "Bottom" {
+//			cursor = instruction.ReplaceEntry.Entry.Content.Operation.Cursor.Value
+//		}
+//	}
+//	if pinnedTweet != nil && len(orderedTweets) > 0 {
+//		orderedTweets = append([]*Tweet{pinnedTweet}, orderedTweets...)
+//	}
+//	return orderedTweets, cursor
+//}
 
 // func (timeline *timeline) parseUsers() ([]*Profile, string) {
 // 	users := make(map[string]Profile)

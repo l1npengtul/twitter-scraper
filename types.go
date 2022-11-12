@@ -12,30 +12,28 @@ type (
 
 	// Tweet type.
 	Tweet struct {
-		Hashtags         []string
-		HTML             string
 		ID               string
-		InReplyToStatus  *Tweet
-		IsQuoted         bool
-		IsPin            bool
+		EditIds          []string
+		Hashtags         []string
+		ReplyingTo       string
+		QuoteRetweetId   string
 		IsReply          bool
 		IsRetweet        bool
-		Likes            int
 		PermanentURL     string
-		Photos           []string
-		Place            *Place
-		QuotedStatus     *Tweet
-		Replies          int
-		Retweets         int
-		RetweetedStatus  *Tweet
+		Media            []Media
+		Card             Card
+		Mentions         map[string]string
 		Text             string
 		TimeParsed       time.Time
 		Timestamp        int64
-		URLs             []string
 		UserID           string
 		Username         string
-		Videos           []Video
 		SensitiveContent bool
+		Likes            int
+		Retweets         int
+		QuoteRetweets    int
+		Replies          int
+		IsTombstone      bool
 	}
 
 	// ProfileResult of scrapping.
@@ -112,6 +110,24 @@ type (
 			Type        string        `json:"type"`
 			Coordinates [][][]float64 `json:"coordinates"`
 		} `json:"bounding_box"`
+	}
+
+	Media struct {
+		IDStr                    string `json:"id_str"`
+		MediaURLHttps            string `json:"media_url_https"`
+		ExtSensitiveMediaWarning struct {
+			AdultContent    bool `json:"adult_content"`
+			GraphicViolence bool `json:"graphic_violence"`
+			Other           bool `json:"other"`
+		} `json:"ext_sensitive_media_warning"`
+		Type      string `json:"type"`
+		URL       string `json:"url"`
+		VideoInfo struct {
+			Variants []struct {
+				Bitrate int    `json:"bitrate,omitempty"`
+				URL     string `json:"url"`
+			} `json:"variants"`
+		} `json:"video_info"`
 	}
 
 	fetchProfileFunc func(query string, maxProfilesNbr int, cursor string) ([]*Profile, string, error)
